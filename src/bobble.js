@@ -11,6 +11,7 @@ var Bobble = (function(global) {
       clearInterval: global.clearInterval,
       postMessage: global.postMessage,
       addEventListener: global.addEventListener,
+      XMLHttpRequest: global.XMLHttpRequest,
       Date: global.Date
     };
     
@@ -20,6 +21,9 @@ var Bobble = (function(global) {
       var intervals         = [];
       var posted_messages   = [];
       var message_receivers = [];
+      var ajax_requests     = [];
+      var ajax_mocks        = {};
+      ajax_mocks.length     = 0;
       
       var tcPsh = function(cl, fn, ms) {
         cl.push({
@@ -50,6 +54,23 @@ var Bobble = (function(global) {
           message = messages.pop();
           i = receivers.length;
           while(i--) { receivers[i](message); }
+        }
+      };
+
+      function advanceAjax(ajax_requests){
+        var i, request, url;
+        while(ajax_requests.length) {
+          request = ajax_requests.pop();
+          url = request.url;
+          i = ajax_requests.length;
+          if(ajax_mocks[url] && ajax_mocks[url].length > 0){
+            ajax_mocks.length -= 1;
+            request.readyState = 4;
+            request.responseText = ajax_mocks[url].pop();
+            request.onreadystatechange(); 
+          }else{
+            throw("Nothing was mocked for request "+ url);
+          }
         }
       };
       
@@ -90,6 +111,17 @@ var Bobble = (function(global) {
               originals.addEventListener.apply(originals, arguments);
             }
           },
+          XMLHttpRequest: function(){
+            return {
+              open: function(){ 
+                var a = arguments; 
+                // GET /json
+                this.url = a[0] + " " + a[1]
+                ajax_requests.push(this)
+              },
+              getResponseHeader: function(){ }
+            }
+          },
           Date: Date
         },
         Controls: {
@@ -101,6 +133,20 @@ var Bobble = (function(global) {
               advanceReceivers(message_receivers, posted_messages);
               advanceTc(timeouts, false); // timeouts which don't repeat
               advanceTc(intervals, true); // intervals which do repeat
+              advanceAjax(ajax_requests)
+            }
+          },
+          mock: function(url, response){
+            ajax_mocks.length += 1;
+            if(ajax_mocks[url]){
+              ajax_mocks[url].push(response);
+            } else {
+              ajax_mocks[url] = [response];
+            }
+          },
+          verifyMocks: function(){
+            if(ajax_mocks.length != 0){
+              throw("Mocks were set but not used")
             }
           }
         }
@@ -108,15 +154,18 @@ var Bobble = (function(global) {
     })(global);
     
     this.run = function() {
-      var setTimeout    = BobbleAPI.Native.setTimeout;
-      var clearTimeout  = BobbleAPI.Native.clearTimeout;
-      var setInterval   = BobbleAPI.Native.setInterval;
-      var clearInterval = BobbleAPI.Native.clearInterval;
-      var postMessage   = BobbleAPI.Native.postMessage;
-      var Date          = BobbleAPI.Native.Date;
+      var setTimeout     = BobbleAPI.Native.setTimeout;
+      var clearTimeout   = BobbleAPI.Native.clearTimeout;
+      var setInterval    = BobbleAPI.Native.setInterval;
+      var clearInterval  = BobbleAPI.Native.clearInterval;
+      var postMessage    = BobbleAPI.Native.postMessage;
+      var Date           = BobbleAPI.Native.Date;
+      var XMLHttpRequest = BobbleAPI.Native.XMLHttpRequest;
       var alert = function(s) { console.log("alert: %o", s); };
       
       var advanceToTime = BobbleAPI.Controls.advanceToTime;
+      var mock          = BobbleAPI.Controls.mock;
+      var verifyMocks   = BobbleAPI.Controls.verifyMocks;
       
       // Override definitions of functions attached to the global object
       (function(global) {
@@ -127,18 +176,20 @@ var Bobble = (function(global) {
         global.Date             = Date;
         global.postMessage      = postMessage;
         global.addEventListener = BobbleAPI.Native.addEventListener;
+        global.XMLHttpRequest   = XMLHttpRequest;
         
         eval(src);
+
       })(global);
       
-      
       // Swap original definitions of global functions back into place
-      global.setTimeout    = originals.setTimeout;
-      global.clearTimeout  = originals.clearTimeout;
-      global.setInterval   = originals.setInterval;
-      global.clearInterval = originals.clearInterval;
-      global.Date          = originals.Date;
-      global.postMessage   = originals.postMessage;
+      global.setTimeout     = originals.setTimeout;
+      global.clearTimeout   = originals.clearTimeout;
+      global.setInterval    = originals.setInterval;
+      global.clearInterval  = originals.clearInterval;
+      global.Date           = originals.Date;
+      global.postMessage    = originals.postMessage;
+      global.XMLHttpRequest = originals.XMLHttpRequest;
     };
   };
 })(this);

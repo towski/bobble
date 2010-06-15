@@ -216,6 +216,51 @@ assertEquals(false, a, "Expected window.clearInterval to have cleared implicit s
 
 
 
+<script class="js-test" type="text/bobble">
+// ajax requests must be mocked
+assertThrows(function() {
+  $.getJSON('/json', function(){})
+  advanceToTime(0)
+}, "Expected error to have been raised when calling an unmocked ajax request");
+</script>
+
+
+
+<script class="js-test" type="text/bobble">
+// ajax requests must be mocked
+assertThrows(function() {
+  mock('GET /json', '["data"]')
+  verifyMocks()
+}, "Expected error to have been raised when calling an unmocked ajax request");
+</script>
+
+
+
+<script class="js-test" type="text/bobble">
+// ajax requests must be mocked
+var result;
+mock('GET /json', '["data"]')
+req = $.getJSON('/json', {}, function(data){ result = data; })
+advanceToTime(0)
+verifyMocks()
+assertEquals("data", result[0], "Should mock data")
+</script>
+
+
+
+<script class="js-test" type="text/bobble">
+// ajax requests must be mocked
+var result1, result2;
+mock('GET /json', '["data"]')
+mock('GET /json', '["doota"]')
+req = $.getJSON('/json', {}, function(data){ result1 = data; })
+req = $.getJSON('/json', {}, function(data){ result2 = data; })
+advanceToTime(0)
+verifyMocks()
+assertEquals("data", result1[0], "Should mock data")
+assertEquals("doota", result2[0], "Should mock data")
+</script>
+
   <script type="text/javascript" language="JavaScript" src="bobbled-jquery-tests-runner.js"></script>
   
   </body>

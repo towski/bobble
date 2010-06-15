@@ -227,7 +227,7 @@ assertThrows(function() {
 
 
 <script class="js-test" type="text/bobble">
-// ajax requests must be mocked
+// mocked requests must be called
 assertThrows(function() {
   mock('GET /json', '["data"]')
   verifyMocks()
@@ -237,7 +237,7 @@ assertThrows(function() {
 
 
 <script class="js-test" type="text/bobble">
-// ajax requests must be mocked
+// callback functions get called with the mock data
 var result;
 mock('GET /json', '["data"]')
 req = $.getJSON('/json', {}, function(data){ result = data; })

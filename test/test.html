@@ -4,6 +4,7 @@
     <title>Bobble Test</title>
     <link href="test.css" media="screen" rel="stylesheet" type="text/css" />
     <script type="text/javascript" language="JavaScript" src="http://ajax.googleapis.com/ajax/libs/prototype/1.6.1.0/prototype.js"></script>
+    <!--script type="text/javascript" language="JavaScript" src="prototype.js"></script-->
     <script type="text/javascript" language="JavaScript" src="../src/bobble.js"></script>
   </head>
   <body>
@@ -213,6 +214,34 @@ advanceToTime(100);
 assertEquals(false, a, "Expected window.clearInterval to have cleared implicit setInterval");
 </script>
 
+
+
+<script class="js-test" type="text/bobble">
+// ajax requests must be mocked
+assertThrows(function() {
+  new Ajax.Request('/some_url', { method:'get' });
+  advanceToTime(0);
+}, "Expected error to have been raised when calling an unmocked ajax request");
+</script>
+
+
+
+<script class="js-test" type="text/bobble">
+// mocked requests must be called
+assertThrows(function() {
+  mock('GET /json', '["data"]');
+  verifyMocks();
+}, "Expected error to have been raised when calling an unmocked ajax request");
+</script>
+
+<script class="js-test" type="text/bobble">
+// callback functions get called with the mock data
+mock('GET /some_url', '["data"]');
+req = new Ajax.Request('/some_url', { method:'get', onSuccess: function(transport){ result = transport.responseText; } });
+advanceToTime(0);
+verifyMocks();
+assertEquals('["data"]', result, "Should mock data");
+</script>
 
 
   <script type="text/javascript" language="JavaScript" src="bobbled-tests-runner.js"></script>
